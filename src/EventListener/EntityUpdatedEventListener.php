@@ -8,9 +8,11 @@ use App\Entity\Project;
 use Doctrine\ORM\Events;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
+use Doctrine\ORM\Event\PostUpdateEventArgs;
 use Psr\Log\LoggerInterface;
 
 #[AsDoctrineListener(event: Events::preUpdate, priority: 500, connection: 'default')]
+#[AsDoctrineListener(event: Events::postUpdate, priority: 500, connection: 'default')]
 class EntityUpdatedEventListener
 {
     private LoggerInterface $logger;
@@ -19,18 +21,20 @@ class EntityUpdatedEventListener
     {
         $this->logger = $logger;
     }
+
     public function preUpdate(PreUpdateEventArgs $args): void
     {
         $entity = $args->getObject();
+        $this->logger->debug('preUpdate invoked', ['id' => $entity->getId()]);
+        
         if ($entity instanceof UpdatedAwareInterface) {
             $entity->setUpdatedAt(new \DateTimeImmutable());
         }
+    }
 
-        if ($entity instanceof Project) {
-            $changes = $args->getEntityChangeSet();
-            if(isset($changes['name'])) {
-                $this->logger->debug('Name has changed', ['id' => $entity->getId()]);
-            }
-        }
+    public function postUpdate(PostUpdateEventArgs $args):void
+    {
+        $entity = $args->getObject();
+        $this->logger->debug('postUpdate invoked', ['id' => $entity->getId()]);
     }
 }
